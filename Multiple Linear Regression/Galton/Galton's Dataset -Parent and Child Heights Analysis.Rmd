@@ -1,0 +1,577 @@
+GALTON'S DATASET - PARENT AND CHILD HEIGHTS - GENETIC VARIATION
+
+A comparison between the heights of adult children against the heights of both parents; in an attempt to infer any apparent relationship between the two.
+The comparison also focuses on which parent gene is stronger, or generally has more influence on the child's height,
+and ideally where each gender of the child inherits more from.
+The heritability of traits, in this case height, from parent to child, is tested with 898 observations, mostly with regards to the gender of each parent and each child
+
+Loading the needed packages
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(mosaicData)
+library(datarium)
+library(plotly)
+
+```
+
+The test data
+
+```{r}
+Galton <- Galton
+```
+
+Observations, details, variables and checking for any missing entries on our test data
+
+```{r}
+str(Galton)
+
+```
+
+```{r}
+colSums(is.na(Galton))
+```
+
+No missing entries are present in our dataset
+
+
+
+1. The influence of both parents' heights on the child heights
+
+
+Getting the average height of both parents in every family, then adding them as a new column in the dataset
+Arranging the columns, and creating the necessary data frame without the unneeded columns - for this specific analysis
+
+```{r}
+Galton$avg_parents=""
+
+avg_h <- (Galton[,2] + Galton[,3])/2
+
+Galton$avg_parents <- avg_h
+
+
+Galton <- Galton[,c(1,2,3,7,4,5,6)]
+
+Galton_parents <- Galton[,-c(2,3,7)]
+```
+
+Renaming the 'sex' column to something more specific; just to avoid ambiguity
+
+```{r}
+Galton_parents <- Galton_parents %>% 
+  rename(
+    child_gender = "sex"
+  )
+
+colnames(Galton_parents)
+```
+
+
+Data visualization
+
+```{r}
+ggplot(Galton_parents, aes(x=avg_parents, y=height))+
+  geom_point()+
+  labs(title = "A SCATTERPLOT SHOWING THE AVERAGE HEIGHTS OF PARENTS,\n AGAINST THE HEIGHTS OF ADULT CHILDREN FROM THE SAME \n FAMILIES", subtitle = "In the 1880s", x="Average Parent Height \n(Inches)", y="Child Height\n(Inches)", caption = "R INBUILT DATASET - MosaicData")+
+  theme_bw()
+
+```
+
+As per the plot above, a positive relationship is visualized between the heights of the parents and the heights of the children. Taller parents generally have taller children, and the vice versa stands.
+
+However, for parents with similar average height, the variation between the child heights observed is quite large.
+
+```{r}
+Galton_parents %>% 
+   filter(avg_parents==67.5) %>% 
+    summarise(max=max(height), min=min(height))
+```
+
+For example, the above average parent height, of 67.5 inches, has a comparatively large range in the case of the child heights; where the tallest is at a height of 79 inches, and the shortest is at 60 inches.
+
+This huge variation indicates that several other factors, excluding the height of both parents strongly determine the height of the child
+
+The other case could be that the children have parents with heights that vary greatly, and the child inherits strongly from one parental side than the other
+
+Breaking it down to gender, however, clearly explains part of this huge variation in child heights, as below.
+
+```{r}
+ggplot(Galton_parents, aes(x=avg_parents, y=height))+
+  geom_point(aes(color=child_gender))+
+  labs(title = "A SCATTERPLOT SHOWING THE AVERAGE HEIGHTS OF PARENTS,\n AGAINST THE HEIGHTS OF ADULT CHILDREN FROM THE SAME \n FAMILIES WITH REGARDS TO THE SPECIFIC GENDER", subtitle = "In the 1880s", x="Average Parent Height \n(Inches)", y="Child Height\n(Inches)", caption = "R INBUILT DATASET - MosaicData")+
+  theme_bw()
+
+```
+
+As seen, a very large influence of the child's height is determined by the gender.
+Male children, as seen above, have higher heights than female children, and this causes the heights of children to vary greatly, despite being from the same family with the same parents
+
+```{r}
+Galton_parents %>% 
+  group_by(child_gender) %>% 
+   summarise(Average_Height=mean(height), Median_Height=median(height))
+```
+
+The height summary above shows the same. Male children tend to have a higher height level than female children
+
+On separate plots
+
+```{r}
+ggplot(Galton_parents, aes(x=avg_parents, y=height))+
+  geom_point()+
+  facet_wrap(~child_gender)+
+  labs(title = "A SCATTERPLOT SHOWING THE AVERAGE HEIGHTS OF PARENTS,\n AGAINST THE HEIGHTS OF ADULT CHILDREN FROM THE SAME \n FAMILIES WITH REGARDS TO THE SPECIFIC GENDER", subtitle = "In the 1880s", x="Average Parent Height \n(Inches)", y="Child Height\n(Inches)", caption = "R INBUILT DATASET - MosaicData")+
+  theme_bw()
+```
+
+Observing the plots, we expect a positive correlation between the child height and the average parents height, and because of the high variation in child heights for similar average parent heights, the correlation is anticipated to be a weak one
+
+```{r}
+cor(Galton_parents$avg_parents, Galton_parents$height)
+```
+
+The value is less than the 0.5 mark, hence is classified as a weak correlation.
+
+A linear model thus, would have a low score, if it were to be used to predict various child heights, with regards to the average height of both parents
+
+```{r}
+Galton_parents_lm <- lm(height~avg_parents, data = Galton_parents) 
+
+summary(Galton_parents_lm)
+```
+
+
+Similar to..
+
+```{r}
+Galton_lm <- lm(height~mother+father, data= Galton)
+
+summary(Galton_lm)
+```
+
+Multiple R squared values of 0.1 are very low. The regression models above would be ineffective if they were to be used to try and achieve accurate predictive child height results, from just the heights of both parents
+
+As mentioned, genes are not the sole predictor of child heights. Lots of other variants, known and unknown come into play
+
+
+
+
+
+Trying to establish which parent has more influence on the child heights
+
+Studies and research show that the father's gene is stronger, and children tend to inherit more from the side of the father than the mother
+
+
+2. Father's height on the height both child genders vs Mother's height on both child genders
+
+Creating the needed dataset, with the needed columns
+
+```{r}
+Galton_father <- Galton[,-c(3,6,7)]
+
+Galton_father <- Galton_father %>% 
+  rename(
+    child_gender = "sex"
+  )
+```
+
+
+Visualization
+
+```{r}
+ggplot(Galton_father, aes(x=father, y=height))+
+  geom_point(aes(color=child_gender))+
+   labs(title = "A SCATTERPLOT SHOWING THE HEIGHTS OF FATHERS,\n AGAINST THE HEIGHTS OF ADULT CHILDREN FROM THE SAME \n FAMILIES WITH REGARDS TO THE SPECIFIC GENDER", subtitle = "In the 1880s", x="Father's Height \n(Inches)", y="Child Height\n(Inches)", caption = "R INBUILT DATASET - MosaicData")+
+   geom_smooth(method="lm")+
+  theme_bw()
+```
+
+On the mother's side..
+
+```{r}
+Galton_mother <- Galton[,-c(2,6,7)]
+
+Galton_mother <- Galton_mother %>% 
+  rename(
+    child_gender = "sex"
+  )
+
+```
+
+```{r}
+ggplot(Galton_mother, aes(x=mother, y=height))+
+  geom_point(aes(color=child_gender))+
+    labs(title = "A SCATTERPLOT SHOWING THE HEIGHTS OF MOTHERS,\n AGAINST THE HEIGHTS OF ADULT CHILDREN FROM THE SAME \n FAMILIES WITH REGARDS TO THE SPECIFIC GENDER", subtitle = "In the 1880s", x="Mother's Height \n(Inches)", y="Child Height\n(Inches)", caption = "R INBUILT DATASET - MosaicData")+
+  geom_smooth(method="lm")+
+  theme_bw()
+```
+
+An apparent difference in correlation is hard to visualize from the plots, however its is clear that an increase in height, for the father, results in a greater increase in child height than for the mother
+Especially for the female child, which, as observed from the mother's plot seems to be relatively similar across the different mother's heights.
+
+Looking at the correlation values..
+
+The father's
+```{r}
+cor(Galton_father$father, Galton_father$height)
+```
+
+The mother's
+```{r}
+cor(Galton_mother$mother, Galton_mother$height)
+```
+
+The father's height has a better, but still weak relationship, with the child height, compared to the mother's height.
+
+```{r}
+
+Galton_father_lm <- lm(height~father, data= Galton_father)
+
+summary(Galton_father_lm)
+```
+
+As seen from the estimate, a one unit, in this case inch, increase on the father's height, increases the child height by an additional 0.39938
+
+The accuracy of the linear model however is still very low, and the father's height alone is not substantial enough to predict child heights.
+
+```{r}
+
+Galton_mother_lm <- lm(height~mother, data= Galton_mother)
+
+summary(Galton_mother_lm)
+```
+
+From the estimate, the increase in height of the mother has less of an influence to the child's height than the father's. Here, a one inch increase in the mother's height shows an additional 0.31318 on the child's height
+
+The predictive model of the mother(at 0.04), is less accurate than the father's(at 0.75), although both models are sufficiently incapable of providing accurate predictive results
+
+
+
+Observing the parents' height in relation to each child gender..
+
+3. Father's vs Mother's height influence on the male child's height
+
+Looking at the father
+
+Filtering the dataset to only the male children, dropping the unneeded columns
+
+```{r}
+Galton_father_male <- Galton %>% 
+                        filter(sex=="M")
+
+Galton_father_male <- Galton_father_male[,-c(3,6,7)]
+  
+Galton_father_male <- Galton_father_male %>% 
+  rename(
+    child_gender = "sex"
+  )
+
+```
+
+Visualization
+
+```{r}
+ggplot(Galton_father_male, aes(x=father, y=height))+
+  geom_point()+
+ labs(title = "A SCATTERPLOT SHOWING THE HEIGHTS OF FATHERS,\n AGAINST THE HEIGHTS OF ADULT MALE CHILDREN FROM THE SAME\n FAMILIES", subtitle = "In the 1880s", x="Father's Height \n(Inches)", y="Male Child Height\n(Inches)", caption = "R INBUILT DATASET - MosaicData")+
+  theme_bw()
+```
+
+High variations in child height still exist, between father's of relatively similar heights
+
+Outlier analysis
+
+
+Observing the child with the highest height at 79..
+The height of the father was at 70 inches, showing a high variation between the father's height and the child's height
+
+A brief look at the child's mother's height - to find out if the high child height could be as a result of a high mother's height
+
+```{r}
+Galton %>% 
+  filter(height==79.0 & father==70.0 & sex=="M")
+```
+
+The mother's height is 5 inches lower than the father's and 14 inches lower than the child height, showing an even greater variation
+
+Comparing the child height to the height of his other siblings
+
+```{r}
+Galton %>% 
+  filter(family==72)
+```
+
+The heights of the children vary greatly, mostly due to the gender, but even amongst the male children there is still a range of 8 inches between the highest and lowest
+
+Here, the father and mother's height cannot explain the child height, and this shows that other factors other than parental genes are signifcant in determining the child height.
+
+It could still be genetic, but possibly from generations before the parents.
+
+
+Aside from the outliers, looking at the correlation between the father's height and the male child's height
+
+```{r}
+cor(Galton_father_male$father, Galton_father_male$height)
+```
+
+Positive, weak.
+But so far the strongest correlation to child height seen. A comparison will be made with the mother's relationship on the male child later
+
+```{r}
+
+Galton_father_male_lm <- lm(height~father, data= Galton_father_male)
+
+summary(Galton_father_male_lm)
+
+```
+
+A rapid male child increase in height is observed too from the coefficients estimate, with an increase in father's height. A one inch increase on the father's height relatively accounts for a 0.44775 increase in the male child's height
+
+
+Looking at the mother
+
+Filtering the dataset, dropping unneeded columns..
+
+```{r}
+Galton_mother_male <- Galton[,-c(2,6,7)]
+
+Galton_mother_male <- Galton_mother_male %>% 
+  filter(sex=="M")
+
+Galton_mother_male <- Galton_mother_male %>% 
+  rename(
+    child_gender = "sex"
+  )
+```
+
+Visualization
+
+```{r}
+ggplot(Galton_mother_male, aes(x=mother, y=height))+
+           geom_point()+
+           labs(title = "A SCATTERPLOT SHOWING THE HEIGHTS OF MOTHERS,\nAGAINST THE HEIGHTS OF ADULT MALE CHILDREN FROM THE SAME \n FAMILIES ", subtitle = "In the 1880s", x="Mother's Height \n(Inches)", y="Male Child Height\n(Inches)", caption = "R INBUILT DATASET - MosaicData")+
+           theme_bw()
+```
+
+Outlier Analysis
+
+Looking at the plot, an outlier is observed at the lowest male child height, despite having an average height mother
+
+Looking at the child's father's height
+
+```{r}
+Galton %>% 
+  filter(height==60.0 & mother==64.5 & sex=="M")
+```
+
+The father's height is at 69.5, relatively tall. A 9.5 inches difference from the male child's height. The parents' heights both cannot establish a relationship with the child height in this case.
+Other factors have to be considered
+
+Looking at the child's siblings, if any
+
+```{r}
+Galton %>% 
+  filter(family==109)
+
+```
+
+Compared to his male counterparts, the child's height is significantly lower and even lower than two of his female siblings.
+
+Another factor had to be in play here other than genes, - illness, injury etc
+
+
+Now observing the mother's correlation on the male child's height, and comparing it to the father's as seen before
+
+```{r}
+cor(Galton_mother_male$mother, Galton_mother_male$height)
+```
+
+Positive, weak.
+
+The correlation between the mother's height and the male child's is lower than that of the father's (0.391).
+The trends are similar, however, the male child heights can be explained better by the father's height than the mother's, just as in the case of both male and female child heights as seen before
+
+```{r}
+Galton_mother_male_lm <- lm(height~mother, data= Galton_mother_male)
+
+summary(Galton_mother_male_lm)
+
+```
+
+The impact of the mother's height on the male child is also lower than that of the father's
+
+A one inch increase in the mother's height adds 0.37669 inches to the male child, compared to the 0.4475 inches in the case of the father
+
+This shows that the more dominant parental genes in a child, with regards to height are the father's
+
+
+4. Father's vs Mother's Height on the Female child Height
+
+Looking at the father
+
+Filtering the dataset, dropping the unneeded columns
+
+```{r}
+Galton_father_female <- Galton_father_female %>% 
+  filter(sex=="F")
+
+Galton_father_female <- Galton[,-c(3,6,7)]
+
+Galton_father_female <- Galton_father_female %>% 
+  rename(
+    child_gender = "sex"
+  )
+```
+
+Visualization
+
+```{r}
+ggplot(Galton_father_female, aes(x=father, y=height))+
+  geom_point()+
+   labs(title = "A SCATTERPLOT SHOWING THE HEIGHTS OF FATHERS,\nAGAINST THE HEIGHTS OF ADULT FEMALE CHILDREN FROM THE SAME \n FAMILIES", subtitle = "In the 1880s", x="Father's Height \n(Inches)", y="Female Child Height\n(Inches)", caption = "R INBUILT DATASET - MosaicData")+
+  theme_bw()
+
+```
+
+Outlier Analysis
+
+Observing the female child with the lowest height
+
+Her mother's height:
+
+```{r}
+Galton %>% 
+  filter(height==56.0 & father==68.0)
+```
+
+The height of the child's mother is 4 inches taller. This child's height hence is not influenced by the parents' height
+
+Comparison with siblings, if any: 
+
+```{r}
+Galton %>% 
+  filter(family==155)
+
+```
+
+As for this child's 5 female siblings, the trend of their heights is fairly similar, and strongly related to the heights of their parents
+The child observed is thus a special case where other variants come into play to determine the height of the child
+
+Further comparison can be made on the child's height at the same height level of the father, to the corresponding child with the highest height
+
+```{r}
+Galton %>% 
+  filter(height==68.0 & father==68.0 & sex=="F")
+```
+
+A rare case too on this, where the child height is equal to the father's height(at 68 inches), despite being of female sex and having a shorter mother(at 65 inches)
+
+```{r}
+Galton %>% 
+  filter(family==134 & father==68.0)
+```
+
+Observing the correlation between the father's height and the female child's height, and later comparing it to the mother's on the same child gender
+
+```{r}
+cor(Galton_father_female$father, Galton_father_female$height)
+```
+
+A weak to medium, positive correlation - the highest observed
+
+The father's height in this case seems to have a stronger relationship with the female child's height(at a co-effiecient of 0.4587605), compared to the relationship with the male child, observed previously, (at 0.3913174)
+
+```{r}
+Galton_father_female_lm <- lm(height~father, data= Galton_father_female)
+
+summary(Galton_father_female_lm)
+```
+
+The R squared value at 0.21 is the highest observed, however still low to generate accuracy in predictions of female child heights.
+
+The father's height hence plays a bigger role hence in determining the height of the female child than of the male
+
+
+Looking at the mother
+
+Filtering, dropping unneeded columns..
+
+```{r}
+Galton_mother_female <- Galton %>% 
+  filter(sex=="F")
+
+Galton_mother_female <- Galton_mother_female[,-c(2,4,7)]
+
+Galton_mother_female <- Galton_mother_female %>% 
+  rename(
+    child_gender = "sex"
+  )
+
+```
+
+Visualization
+
+```{r}
+ggplot(Galton_mother_female, aes(x=mother, y=height))+
+           geom_point()+
+  labs(title = "A SCATTERPLOT SHOWING THE HEIGHTS OF FATHERS,\nAGAINST THE HEIGHTS OF ADULT FEMALE CHILDREN FROM THE SAME\nFAMILIES", subtitle = "In the 1880s", x="Father's Height \n(Inches)", y="Female Child Height\n(Inches)", caption = "R INBUILT DATASET - MosaicData")+
+           theme_bw()
+```
+
+Outlier Analysis
+
+Observing the mother with the highest height..
+
+```{r}
+Galton %>% 
+  filter(mother==70.5, height==61.7)
+```
+
+Comaparison with siblings:
+
+```{r}
+Galton %>% 
+  filter(family==128)
+```
+
+The child's height is 8 inches shorter than the average parents height, and 11 whole inches shorter than her male sibling, a range that cannot only be attributed to gender alone
+
+Again, outlier analysis shows that other variants are necessary in determining the child's height, hence regression models that only factor in the parents' heights cannot fully establish accurate predictive results on child heights
+
+Observing the correlation of the mother's height and the female child's height, and equating it to the (as-seen high) correlation of the father's on the same child gender
+
+```{r}
+cor(Galton_mother_female$mother, Galton_mother_female$height)
+```
+The correlation is much lower than the father's on the female child height(at 0.4587605)
+It is also lower that the mother's correlation on the male child
+
+A model thus, would be less ineffective than that of the father and the female child height alone
+
+```{r}
+Galton_mother_female_lm <- lm(height~mother, data= Galton_mother_female)
+
+summary(Galton_mother_female_lm)
+
+```
+
+As per the co-efficient estimates, the father's at (0.41) compared to the mother's at (0.32) shows that an increase in the father's height has a larger increase in the female child height than that of the mother
+
+
+SUMMARY
+
+The analysis shows that:
+
+1) The father's genetics are more dominant in determining both the male child heights and the female child heights,
+
+
+2) The father's height thus becomes a better indicator of the child heights than the mother's height, however both are still significant child-height determiners on their own,
+
+
+3) The father's height has a better relationship with the female child heights than the males. Male children heights have high volatility, which could be a probable cause of this
+
+
+4) The whole analysis showed great variations among child heights, and some outlier analysis confirmed that the parent heights alone is not enough to fully/ accurately determine the child heights. Other external factors come into play,
+and so accurate linear regression models cannot be fit without significant research on other variants on the subject matter at hand.
+
